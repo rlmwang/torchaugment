@@ -5,12 +5,6 @@ import torchaugment.mask as aug_mask
 from torch.distributions.beta import Beta
 
 
-class Mixup(aug_utils.Aug):
-  def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    self.function = mixup
-
-
 def mixup(image, labels, alpha=1.0):
   """Apply mixup (https://arxiv.org/abs/1710.09412).
   """
@@ -19,7 +13,8 @@ def mixup(image, labels, alpha=1.0):
   perm = torch.randperm(b)
   dist = Beta(alpha, alpha)
   lam = dist.sample([b,1])
-  
+  lam = lam.to(image.device)
+
   image = aug_utils.blend(image, image[perm,...], lam)
   labels = lam * labels + (1 - lam) * labels[perm,...]
 
@@ -34,6 +29,7 @@ def cutmix(image, labels, alpha=1.0):
   perm = torch.randperm(b)
   dist = Beta(alpha, alpha)
   lam = dist.sample([1])
+  lam = lam.to(image.device)
 
   size = [h * torch.sqrt(1 - lam) / 2,
           w * torch.sqrt(1 - lam) / 2]
@@ -55,6 +51,7 @@ def fmix(image, labels, decay=3.0, alpha=1.0):
   perm = torch.randperm(b)
   dist = Beta(alpha, alpha)
   lam = dist.sample([b,1])
+  lam = lam.to(image.device)
 
   image = aug_mask.fmix(image, lam=lam, decay=decay)
   image, mask = aug_mask.detach(image)
@@ -73,7 +70,8 @@ def cutmixup(image, labels, lam=0.5, alpha=1.0, masking=aug_mask.random_block):
   perm = torch.randperm(b)
   dist = Beta(alpha, alpha)
   rho = dist.sample([1])
-  
+  rho = rho.to(image.device)
+
   tau = lam + rho * (1 - lam)
   sig = 1 - rho * (1 - lam)
 
