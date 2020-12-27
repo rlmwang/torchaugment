@@ -24,6 +24,10 @@ def _attach(image, mask):
     return image
 
 
+def detach(image):
+  return image[:,:3,:,:], image[:,3:,:,:]
+
+
 def cutout(image, size):
   b, c, h, w = image.shape
 
@@ -35,7 +39,7 @@ def cutout(image, size):
 
   mask = (center_h - size[0] <= mask_h) & (mask_h < center_h + size[0]) \
        & (center_w - size[1] <= mask_w) & (mask_w < center_w + size[1])
-    
+
   return _attach(image, mask)
 
 
@@ -84,11 +88,11 @@ def random_block(image, size=[50,50], lam=None):
             int(w * min(lam,1))]
 
   if size == [h,w]:
-    return _attach(images, torch.ones(b,1,h,w))
-    
+    return _attach(image, torch.ones(b,1,h,w))
+  
   rand_h = torch.randint(h - size[0] + 1, [b,1,1,1])
   rand_w = torch.randint(w - size[1] + 1, [b,1,1,1])
-    
+  
   mask_h = torch.arange(h).view(1,1,-1,1).expand(b,-1,-1,-1)
   mask_w = torch.arange(w).view(1,1,1,-1).expand(b,-1,-1,-1)
     
@@ -172,7 +176,6 @@ def fmix(image, lam=None, decay=3.0):
   b, c, h, w = image.shape
   mask = low_freq_mask([b,1,h,w], decay)
   mask = binarise_mask(mask, lam)
-
   return _attach(image, mask)
 
 

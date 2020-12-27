@@ -10,28 +10,13 @@ from torch.distributions.beta import Beta
 from copy import deepcopy
 
 
-def blend(image1, image2, factor):
-  """Blend image1 and image2 by linearly interpolating by a factor.
-  """
-  ones = [1] * (image1.dim() - 1)
-  factor = factor.view(-1, *ones)
-  factor = factor.to(image1.dtype)
-  factor = factor.to(image1.device)
-
-  output = image1 + factor * (image2 - image1)
-  return torch.clamp(output, 0, 255)
-
-
 def uint8_histc(image):
   b, c, = image.shape[:2]
-
   try:
     image = image.view(b,c,-1,1)
   except:
     image = image.reshape(b,c,-1,1)
-
   bins = torch.arange(0, 256).view(1,1,1,-1)
-
   return (image == bins).sum(-2)
 
 
@@ -130,45 +115,6 @@ def _to_camel_case(snake_str):
   return ''.join(x.title() for x in snake_str.split('_'))
 
 
-def create_aug_class(function):
-  class Aug(nn.Module):
-    
-    def __init__(self, *args, **kwargs):
-      super().__init__()
-      self.args = args
-      self.kwargs = kwargs
-    
-      self.__class__.__name__ = _to_camel_case(function.__name__)  
-    
-    def forward(self, x):
-      return function(x, *self.args, **self.kwargs)
-  
-    def __repr__(self):
-      args = ', '.join(str(x) for x in self.args)
-      kwargs = ', '.join(f'{k}={self.kwargs[k]}' for k in self.kwargs) 
-      inputs = ", ".join([args, kwargs]).strip(', ')
-      return f'{self.__class__.__name__}({inputs})'
-
-  return Aug
-
-
-class Aug(nn.Module):
-
-  def __init__(self, *args, **kwargs):
-    super().__init__()
-    self.args = args
-    self.kwargs = kwargs
-
-  def forward(self, x):
-    return self.function(x, *self.args, **self.kwargs)
-
-  def __repr__(self):
-    args = ', '.join(str(x) for x in self.args)
-    kwargs = ', '.join(f'{k}={self.kwargs[k]}' for k in self.kwargs) 
-    inputs = ", ".join([args, kwargs]).strip(', ')
-    return f'{self.__class__.__name__}({inputs})'
-
-
 class RandomCrop(torch.nn.Module):
   """
   Adopted from pytorch 1.7, added iid_crops.
@@ -245,28 +191,6 @@ def _setup_size(size, error_msg):
   if len(size) != 2:
     raise ValueError(error_msg)
   return size
-
-
-def mixup(inputs, labels, alpha=1.0):
-  """Apply mixup (  ).
-  """
-  b = inputs.shape[0]
-
-  perm = torch.randperm(b)
-
-  dist = Beta(alpha, alpha)
-  factor = dist.sample([b,1])
-
-  inputs = blend(inputs, inputs[perm,...], factor)
-  labels = blend(labels, labels[perm,...], factor)
-
-  return inputs, labels
-
-
-class Mixup(Aug):
-  def __init__(self, *args, **kwargs):
-    super().__init__(*args, **kwargs)
-    self.function = mixup
 
 
 def __identity__(image, level):
