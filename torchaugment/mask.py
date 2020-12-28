@@ -7,6 +7,11 @@ channels by multiplying the old with the new.
 import math
 import torch
 import torch.fft
+from torch import Tensor
+
+
+def to_tensor(x):
+  return torch.tensor(x) if not isinstance(x, Tensor) else x
 
 
 def _attach(image, mask):
@@ -31,14 +36,18 @@ def detach(image):
 def cutout(image, size):
   b, c, h, w = image.shape
 
+  size_h, size_w = size
+  size_h = to_tensor(size_h).to(torch.int64).to(image.device).view(-1,1,1,1)
+  size_w = to_tensor(size_w).to(torch.int64).to(image.device).view(-1,1,1,1)
+
   center_h = torch.randint(h, (b,1,1,1), device=image.device)
   center_w = torch.randint(w, (b,1,1,1), device=image.device)
 
   mask_h = torch.arange(h, device=image.device).view(1,1,-1,1)
   mask_w = torch.arange(w, device=image.device).view(1,1,1,-1)
 
-  mask = (center_h - size[0] <= mask_h) & (mask_h < center_h + size[0]) \
-       & (center_w - size[1] <= mask_w) & (mask_w < center_w + size[1])
+  mask = (center_h - size_h <= mask_h) & (mask_h < center_h + size_h) \
+       & (center_w - size_w <= mask_w) & (mask_w < center_w + size_w)
 
   return _attach(image, mask)
 
@@ -54,6 +63,8 @@ def random_pixel(image, lam=0.5, kernel=1):
   rand = rand.repeat_interleave(kernel, dim=3)
   rand = rand[:,:,:h,:w]
 
+  lam = to_tensor(lam).view(-1,1,1,1)
+
   return _attach(image, rand <= lam)
 
 
@@ -65,6 +76,8 @@ def random_row(image, lam=0.5, kernel=1):
   rand = torch.rand([b,1,h_,1], device=image.device)
   rand = rand.repeat_interleave(kernel, dim=2)
   rand = rand.expand(-1,-1,-1,w)[:,:,:h,:]
+  
+  lam = to_tensor(lam).view(-1,1,1,1)
 
   return _attach(image, rand <= lam)
 
@@ -76,7 +89,9 @@ def random_col(image, lam=0.5, kernel=1):
     
   rand = torch.rand([b,1,1,w_])
   rand = rand.expand(-1,-1,h,-1)[:,:,:,:w]
-    
+  
+  lam = to_tensor(lam).view(-1,1,1,1)
+
   return _attach(image, rand <= lam)
 
 
@@ -84,20 +99,24 @@ def random_block(image, size=[50,50], lam=None):
   b, c, h, w = image.shape
 
   if lam is not None:
-    size = [int(h * min(lam,1)),
-            int(w * min(lam,1))]
+    sqrt_lam = torch.sqrt(lam)
+    size = (h * sqrt_lam, w * sqrt_lam)
 
-  if size == [h,w]:
+  if size == [h,w] or all(s == [h,w] for s in size):
     return _attach(image, torch.ones(b,1,h,w))
-  
-  rand_h = torch.randint(h - size[0] + 1, [b,1,1,1])
-  rand_w = torch.randint(w - size[1] + 1, [b,1,1,1])
+
+  size_h, size_w = size
+  size_h = to_tensor(size_h).to(torch.int64).view(-1,1,1,1)
+  size_w = to_tensor(size_w).to(torch.int64).view(-1,1,1,1)
+
+  rand_h = torch.floor(torch.rand([b,1,1,1]) * (h - size_h + 1))
+  rand_w = torch.floor(torch.rand([b,1,1,1]) * (w - size_w + 1))
   
   mask_h = torch.arange(h).view(1,1,-1,1).expand(b,-1,-1,-1)
   mask_w = torch.arange(w).view(1,1,1,-1).expand(b,-1,-1,-1)
-    
-  mask = (rand_h <= mask_h) & (mask_h < rand_h + size[0]) \
-       & (rand_w <= mask_w) & (mask_w < rand_w + size[1])
+  
+  mask = (rand_h <= mask_h) & (mask_h < rand_h + size_h) \
+       & (rand_w <= mask_w) & (mask_w < rand_w + size_w)
 
   return _attach(image, mask)
 
@@ -115,9 +134,9 @@ def random_strip(image, dim, size=50, num=1, lam=None):
   d = image.shape[dim]
 
   if lam is not None:
-    size = int(d * lam)
+    size = d * lam
 
-  if size >= d:
+  if size >= d or all(s >= d for s in size):
     mask = torch.ones(b,1,1,d)
     mask = mask.transpose(-1,dim)
     return _attach(image, mask)
@@ -240,11 +259,13 @@ def binarise_mask(mask, lam):
   index = mask.argsort(-1, descending=True)
 
   if torch.rand(1) < 0.5:
-    n = math.ceil(lam * mask.shape[-1])
+    cutoff = torch.ceil(lam * mask.shape[-1])
   else:
-    n = math.floor(lam * mask.shape[-1])
-  
-  mask.scatter_(1, index[:,:n], 1)
-  mask.scatter_(1, index[:,n:], 0)
+    cutoff = torch.floor(lam * mask.shape[-1])
+  cutoff = cutoff.to(torch.int64)
+
+  for msk, idx, cut in zip(mask, index, cutoff):
+    msk[idx[:cut]] = 1
+    msk[idx[cut:]] = 0
 
   return mask.view(shape)
