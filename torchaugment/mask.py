@@ -130,63 +130,47 @@ def random_col_strip(image, **kwargs):
   return random_strip(image, 3, **kwargs)
 
 
-def random_strip(image, dim, size=50, num=1, lam=None):
+def random_strip(image, dim, size=50, lam=None):
   b, c = image.shape[:2]
   d = image.shape[dim]
+
+  device = image.device
 
   if lam is not None:
     size = d * lam
 
-  if size >= d or all(s >= d for s in size):
-    mask = torch.ones(b,1,1,d)
-    mask = mask.transpose(-1,dim)
-    return _attach(image, mask)
-    
-  if num > 1:
-    ones = torch.ones([b,size-1])
-    steps = torch.multinomial(ones, num - 1) + 1
-    steps = torch.sort(steps, dim=1)[0]
-  else:
-    steps = torch.tensor([])
+  size = to_tensor(size).to(device).view(-1,1,1,1)
 
-  zero, one = torch.zeros([b,1]), torch.ones([b,1])
-  steps = torch.cat([zero, steps, size * one], -1)
-  steps = steps[:,1:] - steps[:,:-1]
+  start = torch.rand([b,1,1,1], device=device) * (d - size)
 
-  strips = []
-  for i in range(b):
-    left = 0
-    right = d - size
-    for j in range(num):
-      strips.append(torch.randint(left, right, [1]))
-      left = int(strips[-1] + steps[i,j])
-      right += int(steps[i,j])
-
-  strips = torch.stack(strips)
-  strips = strips.view(b,num,1,1)
-  steps = steps.view(b,num,1,1)
-
-  index = torch.arange(d, device=image.device).view(1,1,1,d)
-  mask = (strips <= index) & (index < strips + steps)
-  mask = mask.any(1, keepdim=True).transpose(-1,dim)
+  index = torch.arange(d, device=device).view(1,1,1,d)
+  mask = (start <= index) & (index < start + size)
+  mask = mask.transpose(-1,dim)
 
   return _attach(image, mask)
 
 
-def specaugment(image, param, dim):
-  b = image.shape[0]
-  d = img.shape[dim]
- 
-  ones = (image.dim() - 1) * [1]
-  start = torch.rand([batch] + ones)
-  final = torch.rand([batch] + ones)
+def time(image, lam=1.0):
+  size = lam * image.shape[-1]
+  return specaugment(image, size, -1)
 
-  start = start * (length - param)
-  final = start + final * param
-    
-  mask = torch.arange(0,d)
-  mask = mask.view(ones + [-1])
-  mask = (start <= mask) & (mask < final)
+
+def frequency(image, lam=1.0):
+  size = lam * image.shape[-2]
+  return specaugment(image, size, -2)
+
+
+def specaugment(image, size, dim):
+  b = image.shape[0]
+  d = image.shape[dim]
+ 
+  size = to_tensor(size).view(-1,1,1,1)
+
+  width = torch.rand([b,1,1,1]) * size
+  start = torch.rand([b,1,1,1]) * (d - width)
+
+  mask = torch.arange(0,d).view([1,1,1,-1])
+  mask = (start <= mask) & (mask < start + width)
   mask = mask.transpose(-1,dim)
 
   return _attach(image, mask)
