@@ -97,6 +97,7 @@ def random_col(image, lam=0.5, kernel=1):
 
 def random_block(image, size=[50,50], lam=None):
   b, c, h, w = image.shape
+  device = image.device
 
   if lam is not None:
     sqrt_lam = torch.sqrt(lam)
@@ -106,14 +107,14 @@ def random_block(image, size=[50,50], lam=None):
     return _attach(image, torch.ones(b,1,h,w))
 
   size_h, size_w = size
-  size_h = to_tensor(size_h).to(torch.int64).to(image.device).view(-1,1,1,1)
-  size_w = to_tensor(size_w).to(torch.int64).to(image.device).view(-1,1,1,1)
+  size_h = to_tensor(size_h).to(torch.int64).to(device).view(-1,1,1,1)
+  size_w = to_tensor(size_w).to(torch.int64).to(device).view(-1,1,1,1)
 
-  rand_h = torch.floor(torch.rand([b,1,1,1], device=image.device) * (h - size_h + 1))
-  rand_w = torch.floor(torch.rand([b,1,1,1], device=image.device) * (w - size_w + 1))
+  rand_h = torch.floor(torch.rand([b,1,1,1], device=device) * (h - size_h + 1))
+  rand_w = torch.floor(torch.rand([b,1,1,1], device=device) * (w - size_w + 1))
   
-  mask_h = torch.arange(h).view(1,1,-1,1).expand(b,-1,-1,-1)
-  mask_w = torch.arange(w).view(1,1,1,-1).expand(b,-1,-1,-1)
+  mask_h = torch.arange(h, device=device).view(1,1,-1,1).expand(b,-1,-1,-1)
+  mask_w = torch.arange(w, device=device).view(1,1,1,-1).expand(b,-1,-1,-1)
   
   mask = (rand_h <= mask_h) & (mask_h < rand_h + size_h) \
        & (rand_w <= mask_w) & (mask_w < rand_w + size_w)
