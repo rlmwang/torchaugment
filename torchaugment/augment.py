@@ -9,6 +9,8 @@ import torchvision.transforms.functional as VF
 from torch.distributions.beta import Beta
 from copy import deepcopy
 
+from torchaugment.utils import Aug
+
 
 def uint8_histc(image):
   b, c, = image.shape[:2]
@@ -239,7 +241,7 @@ class Cutout(Aug):
     super().__init__(*args, **kwargs)
     self.function = cutout
 
-# %% [code]
+
 def __solarize__(image, level):
   return (), {'threshold': int(level * 255)}
 
@@ -545,7 +547,7 @@ def sharpness(image, factor):
   kernel = kernel.view(1,1,3,3)
   kernel = kernel.expand(3,-1,-1,-1)
 
-  soft = F.conv2d(soft, kernel, padding=1, groups=3)  
+  soft = F.conv2d(image, kernel, padding=1, groups=3)  
   soft = torch.clamp(soft, 0, 255)
 
   soft[...,(0,-1),:] = image[...,(0,-1),:]
@@ -810,7 +812,7 @@ SPEC_AUG_LIST = [
 ]
 
 
-def rand_augment(image, num_steps, level, alpha=None,
+def rand_augment(image, num_augs, level, alpha=None,
                  augs=AUG_LIST, add_identity=True, add_augs=None):
   """RandAugment with sampling (https://arxiv.org/abs/1909.13719).
   """
@@ -818,13 +820,13 @@ def rand_augment(image, num_steps, level, alpha=None,
 
   if add_identity:
     augs.append(identity)
-    
+
   if add_augs is not None:
     augs.extend(add_augs)
 
   if alpha is None:
         
-    for _ in range(num_steps):
+    for _ in range(num_augs):
       index = torch.randint(len(augs), [1])
       image = augs[index](image, level=level)
 
@@ -838,7 +840,7 @@ def rand_augment(image, num_steps, level, alpha=None,
     elif level.dim() == 1:
       level = level.view(1,-1).expand(alpha.shape[0],-1)
 
-    alpha = alpha[:num_steps,:]
+    alpha = alpha[:num_augs,:]
     alpha = F.softmax(alpha,-1).cumsum(-1)
 
     for a in alpha:
