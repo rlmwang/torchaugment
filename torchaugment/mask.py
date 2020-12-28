@@ -106,11 +106,11 @@ def random_block(image, size=[50,50], lam=None):
     return _attach(image, torch.ones(b,1,h,w))
 
   size_h, size_w = size
-  size_h = to_tensor(size_h).to(torch.int64).view(-1,1,1,1)
-  size_w = to_tensor(size_w).to(torch.int64).view(-1,1,1,1)
+  size_h = to_tensor(size_h).to(torch.int64).to(image.device).view(-1,1,1,1)
+  size_w = to_tensor(size_w).to(torch.int64).to(image.device).view(-1,1,1,1)
 
-  rand_h = torch.floor(torch.rand([b,1,1,1]) * (h - size_h + 1))
-  rand_w = torch.floor(torch.rand([b,1,1,1]) * (w - size_w + 1))
+  rand_h = torch.floor(torch.rand([b,1,1,1], device=image.device) * (h - size_h + 1))
+  rand_w = torch.floor(torch.rand([b,1,1,1], device=image.device) * (w - size_w + 1))
   
   mask_h = torch.arange(h).view(1,1,-1,1).expand(b,-1,-1,-1)
   mask_w = torch.arange(w).view(1,1,1,-1).expand(b,-1,-1,-1)
