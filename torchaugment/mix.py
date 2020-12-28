@@ -62,7 +62,7 @@ def fmix(image, labels, decay=3.0, alpha=1.0):
   return image, labels
 
 
-def cutmixup(image, labels, lam=1.0, alpha=1.0, 
+def cutmixup(image, labels, lam=1.0, alpha=1.0, beta=1.0,
              masking=aug_mask.random_block):
   """Combines CutMix and MixUp, designed for RandAugment.
   The parameter lambda represents the intensity of augmentation (either a 50/50
@@ -74,7 +74,10 @@ def cutmixup(image, labels, lam=1.0, alpha=1.0,
 
   perm = torch.randperm(b)
 
-  rho = Beta(alpha, alpha).sample([b,1])
+  lam = Beta(alpha, alpha).sample([b,1]) * lam
+  lam = lam.to(image.device)
+
+  rho = Beta(beta, beta).sample([b,1])
   rho = rho.to(image.device)
   
   tau = (1 - rho) * lam * 0.5 + rho
