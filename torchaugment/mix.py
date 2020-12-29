@@ -15,7 +15,7 @@ def mixup(image, label, alpha=1.0):
   lam = Beta(alpha, alpha).sample([b,1])
   lam = lam.to(image.device)
 
-  image = aug_utils.blend(image, image[perm...], lam)
+  image = aug_utils.blend(image, image[perm,...], lam)
   label = lam * label + (1 - lam) * label[perm...]
 
   return image, label
