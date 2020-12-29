@@ -26,5 +26,4 @@ def blend(image1, image2, lam=0.5):
   lam = lam.to(image1.dtype)
   lam = lam.to(image1.device)
 
-  output = image1 + lam * (image2 - image1)
-  return torch.clamp(output, 0, 255)
+  return image1 + lam * (image2 - image1)

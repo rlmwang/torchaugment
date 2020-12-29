@@ -5,7 +5,7 @@ import torchaugment.mask as aug_mask
 from torch.distributions.beta import Beta
 
 
-def mixup(image, labels, alpha=1.0):
+def mixup(image, label, alpha=1.0):
   """Apply mixup (https://arxiv.org/abs/1710.09412).
   """
   b = image.shape[0]
@@ -15,13 +15,13 @@ def mixup(image, labels, alpha=1.0):
   lam = Beta(alpha, alpha).sample([b,1])
   lam = lam.to(image.device)
 
-  image = aug_utils.blend(image, image[perm,...], lam)
-  labels = lam * labels + (1 - lam) * labels[perm,...]
+  image = aug_utils.blend(image, image[perm...], lam)
+  label = lam * label + (1 - lam) * label[perm...]
 
-  return image, labels
+  return image, label
 
 
-def cutmix(image, labels, alpha=1.0):
+def cutmix(image, label, alpha=1.0):
   """Apply cutmix (https://arxiv.org/abs/1905.04899).
   """
   b, c, h, w = image.shape
@@ -38,12 +38,12 @@ def cutmix(image, labels, alpha=1.0):
   image, mask = aug_mask.detach(image)
 
   image = (1 - mask) * image + mask * image[perm,...]
-  labels = lam * labels + (1 - lam) * labels[perm,...]
+  label = lam * label + (1 - lam) * label[perm,...]
 
-  return image, labels
+  return image, label
 
 
-def fmix(image, labels, decay=3.0, alpha=1.0):
+def fmix(image, label, decay=3.0, alpha=1.0):
   """Apply cutmix (https://arxiv.org/abs/1905.04899).
   """
   b = image.shape[0]
@@ -57,13 +57,12 @@ def fmix(image, labels, decay=3.0, alpha=1.0):
   image, mask = aug_mask.detach(image)
 
   image = (1 - mask) * image + mask * image[perm,...]
-  labels = lam * labels + (1 - lam) * labels[perm,...]
+  label = lam * label + (1 - lam) * label[perm,...]
 
-  return image, labels
+  return image, label
 
 
-def cutmixup(image, labels, lam=1.0, alpha=1.0, beta=1.0,
-             masking=aug_mask.random_block):
+def cutmixup(image, label, lam=1.0, alpha=1.0, masking=aug_mask.random_block):
   """Combines CutMix and MixUp, designed for RandAugment.
   The parameter lambda represents the intensity of augmentation (either a 50/50
   mixup or covering 50% of the image with cutmix). Whether to prioritize cutmix 
@@ -74,10 +73,7 @@ def cutmixup(image, labels, lam=1.0, alpha=1.0, beta=1.0,
 
   perm = torch.randperm(b)
 
-  lam = Beta(alpha, alpha).sample([b,1]) * lam
-  lam = lam.to(image.device)
-
-  rho = Beta(beta, beta).sample([b,1])
+  rho = Beta(alpha, alpha).sample([b,1])
   rho = rho.to(image.device)
   
   tau = (1 - rho) * lam * 0.5 + rho
@@ -87,6 +83,8 @@ def cutmixup(image, labels, lam=1.0, alpha=1.0, beta=1.0,
   image, mask = aug_mask.detach(masking(image, lam=sig))
 
   image = (1 - mask) * image + mask * blend
-  labels = (1 - lam * 0.5) * labels + lam * 0.5 * labels[perm,...]
+  label = (1 - lam * 0.5) * label + lam * 0.5 * label[perm,...]
 
-  return image, labels
+  return image, label
+
+
