@@ -9,15 +9,18 @@ import torchvision.transforms.functional as VF
 from torch.distributions.beta import Beta
 
 
-def sharpness(image, lam=1.0, alpha=1.0, masking=augmask.random_block):
+def sharpness(image, lam=1.0, alpha=None, masking=augmask.random_block):
   """Blends image with softened version. 
   """
   b, c, h, w = image.shape
 
   reduced = augbase.blur(image)
 
-  rho = Beta(alpha, alpha).sample([b,1])
-  rho = rho.to(image.device)  
+  if alpha = None:
+    rho = 1
+  else:
+    rho = Beta(alpha, alpha).sample([b,1])
+    rho = rho.to(image.device)
 
   tau = (1 - rho) * lam + rho
   sig = (1 - rho) + rho * lam
@@ -34,8 +37,11 @@ def brightness(image, lam=1.0, alpha=1.0, masking=augmask.random_block):
 
   reduced = augbase.black(image)
 
-  rho = Beta(alpha, alpha).sample([b,1])
-  rho = rho.to(image.device)  
+  if alpha = None:
+    rho = 1
+  else:
+    rho = Beta(alpha, alpha).sample([b,1])
+    rho = rho.to(image.device)
 
   tau = (1 - rho) * lam + rho
   sig = (1 - rho) + rho * lam
@@ -53,8 +59,11 @@ def contrast(image, lam=1.0, alpha=1.0, grayscale=False,
 
   reduced = augbase.mean(image, grayscale=grayscale)
 
-  rho = Beta(alpha, alpha).sample([b,1])
-  rho = rho.to(image.device)  
+  if alpha = None:
+    rho = 1
+  else:
+    rho = Beta(alpha, alpha).sample([b,1])
+    rho = rho.to(image.device)
 
   tau = (1 - rho) * lam + rho
   sig = (1 - rho) + rho * lam
