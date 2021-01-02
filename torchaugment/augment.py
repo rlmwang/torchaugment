@@ -848,8 +848,8 @@ def rand_augment(image, num_augs, level, alpha=None,
     alpha = to_tensor(alpha)
     level = to_tensor(level)
     
-    alpha = force_shape_2d(alpha, [num_augs, len(AUG_LIST)])
-    level = force_shape_2d(level, [num_augs, len(AUG_LIST)])
+    alpha = force_shape_2d(alpha, [num_augs, len(augs)])
+    level = force_shape_2d(level, [num_augs, len(augs)])
     
     alpha = F.softmax(alpha,-1).cumsum(-1)
 
@@ -875,8 +875,8 @@ def rand_augment_softmax(image, alpha, level,
   if add_augs is not None:
     augs.extend(add_augs)
 
-  alpha = force_shape_2d(alpha, [num_augs, len(AUG_LIST)])
-  level = force_shape_2d(level, [num_augs, len(AUG_LIST)])
+  alpha = force_shape_2d(alpha, [num_augs, len(augs)])
+  level = force_shape_2d(level, [num_augs, len(augs)])
 
   alpha = F.softmax(alpha, -1)
     
