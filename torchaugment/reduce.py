@@ -16,7 +16,7 @@ def sharpness(image, lam=1.0, alpha=None, masking=augmask.random_block):
 
   reduced = augbase.blur(image)
 
-  if alpha = None:
+  if alpha is None:
     rho = 1
   else:
     rho = Beta(alpha, alpha).sample([b,1])
@@ -37,7 +37,7 @@ def brightness(image, lam=1.0, alpha=1.0, masking=augmask.random_block):
 
   reduced = augbase.black(image)
 
-  if alpha = None:
+  if alpha is None:
     rho = 1
   else:
     rho = Beta(alpha, alpha).sample([b,1])
@@ -59,7 +59,7 @@ def contrast(image, lam=1.0, alpha=1.0, grayscale=False,
 
   reduced = augbase.mean(image, grayscale=grayscale)
 
-  if alpha = None:
+  if alpha is None:
     rho = 1
   else:
     rho = Beta(alpha, alpha).sample([b,1])
