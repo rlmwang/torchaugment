@@ -812,6 +812,20 @@ SPEC_AUG_LIST = [
 ]
 
 
+def to_tensor(x):
+  return torch.tensor(x) if not isinstance(x, torch.Tensor) else x
+
+
+def force_shape_2d(x, shape):
+  if x.numel() == 1:
+    x = x.expand(shape)
+  else:
+    x = x.view(-1,shape[1])
+    x = x[:shape[0],:]
+    x = x.expand(shape[0],-1)
+  return x
+
+
 def rand_augment(image, num_augs, level, alpha=None,
                  augs=AUG_LIST, add_identity=True, add_augs=None):
   """RandAugment with sampling (https://arxiv.org/abs/1909.13719).
@@ -831,21 +845,18 @@ def rand_augment(image, num_augs, level, alpha=None,
       image = augs[index](image, level=level)
 
   else:
-
-    assert alpha.dim() == 2
-    assert alpha.shape[1] == len(augs)
-
-    if level.numel() == 1:
-      level = level.expand(alpha.shape)
-    elif level.dim() == 1:
-      level = level.view(1,-1).expand(alpha.shape[0],-1)
-
-    alpha = alpha[:num_augs,:]
+    alpha = to_tensor(alpha)
+    level = to_tensor(level)
+    
+    alpha = force_shape_2d(alpha, [num_augs, len(AUG_LIST)])
+    level = force_shape_2d(level, [num_augs, len(AUG_LIST)])
+    
     alpha = F.softmax(alpha,-1).cumsum(-1)
 
-    for a in alpha:
-      index = (torch.rand(1) <= alpha).sum() - 1
-      image = augs[index](image, level=level)
+    for a, l in zip(alpha, level):
+      index = a <= torch.rand(1)
+      index = index.sum()
+      image = augs[index](image, level=l[index])
     
   return image
 
@@ -864,13 +875,8 @@ def rand_augment_softmax(image, alpha, level,
   if add_augs is not None:
     augs.extend(add_augs)
 
-  assert alpha.dim() == 2
-  assert alpha.shape[1] == len(augs)
-
-  if level.numel() == 1:
-    level = level.expand(alpha.shape)
-  elif level.dim() == 1:
-    level = level.view(1,-1).expand(alpha.shape[0],-1)
+  alpha = force_shape_2d(alpha, [num_augs, len(AUG_LIST)])
+  level = force_shape_2d(level, [num_augs, len(AUG_LIST)])
 
   alpha = F.softmax(alpha, -1)
     
