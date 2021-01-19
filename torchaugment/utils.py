@@ -3,7 +3,7 @@ import torch.nn as nn
 
 
 def to_tensor(x):
-  return torch.tensor(x) if not isinstance(x, Tensor) else x
+  return torch.tensor(x) if not isinstance(x, torch.Tensor) else x
 
 
 class Aug(nn.Module):
