@@ -1,6 +1,11 @@
 import torch
 import torch.nn as nn
 
+
+def to_tensor(x):
+  return torch.tensor(x) if not isinstance(x, Tensor) else x
+
+
 class Aug(nn.Module):
 
   def __init__(self, *args, **kwargs):
@@ -22,6 +27,8 @@ def blend(image1, image2, lam=0.5):
   """Blend image1 and image2 by linearly interpolating by a factor lambda.
   """
   ones = [1] * (image1.dim() - 1)
+
+  lam = to_tensor(lam)
   lam = lam.view(-1, *ones)
   lam = lam.to(image1.dtype)
   lam = lam.to(image1.device)
